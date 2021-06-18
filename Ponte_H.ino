@@ -15,8 +15,8 @@ void MotorCommand(double cmd) {
     analogWrite(ID, abs(cmd));
   }
 
-  Serial.print("angle: "); Serial.print(kalAngleY);
-  Serial.print(" force: "); Serial.println(cmd);
+  //Serial.print("angle: "); Serial.print(kalAngleY);
+  //Serial.print(" force: "); Serial.println(cmd);
 
 }
 void PonteInit() {
