@@ -21,15 +21,10 @@ int devStatus = mpu.dmpInitialize();
       mpu.getIntStatus();
 
       mpuInterrupt = true;
-  } else {
-      // ERROR!
-      // 1 = initial memory load failed
-      // 2 = DMP configuration updates failed
-      // (if it's going to break, usually the code will be 1)
-      Serial.print(F("DMP Initialization failed (code "));
-      Serial.print(devStatus);
-      Serial.println(F(")"));
-  }
+  } 
+
+  MPURequestData();
+  setPoint = gyYangle;
 
 }
 
@@ -49,7 +44,7 @@ Gy = ((Wire.read() << 8) | Wire.read());
 Gz = ((Wire.read() << 8) | Wire.read());
 
 gyXangle = Gx / 131.0;
-gyYangle = Gy / 131.0;
+gyYangle = (Gy / 131.0) - setPoint;
 gyZangle = Gz / 131.0;
 
 }

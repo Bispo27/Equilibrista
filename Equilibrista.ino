@@ -31,12 +31,10 @@ double posAngleZ = 0;
 void MPURequestData();
 void MPUInit();
 
-double dTime = micros() / 1000000.00;
+double lastTime = micros() / 1000000.00;
 int16_t Ax, Ay, Az, T, Gx, Gy, Gz;
 volatile bool mpuInterrupt = false;     // indicates whether MPU interrupt pin has gone high
-void dmpDataReady() {
-mpuInterrupt = true;
-};
+
 
 
 void MPUInitQuaternions();
@@ -53,44 +51,90 @@ void MPUInitQuaternions();
 
 
 void PonteInit();
-void MotorCommand(double cmd);
+void MotorCommand(double cmdR, double cmdL);
 
 /**fim funções e variáveis PONTE-H***/
 
 /**funções e variáveis PD***/
-double KD = 0.2;
-double KP = 7.500;
+double KD = 2.500; //10
+double KP = 7500.0; //10000
+
+double KR = 0.50;
+double KL = 0.00;
 
 double setPoint = 0.00;
-float lastAngle = 0.00;
-double lastTime = 0.00;
-double iE = 0.00;
 
+volatile int32_t tickR = 0; 
+#define CLKR  A0
+#define DTR  A1
+#define DWR  A2
+volatile bool lastStateRight;
+void ReadRightTick();
+
+volatile int32_t tickL = 0; 
+#define CLKL  8
+#define DTL  9
+#define DWL  10
+volatile bool lastStateLeft;
+void ReadLeftTick();
+
+
+void UpdateTick();
+
+ 
 void Controler(double angle, int tickA, int tickB);
 
 
 /****************fim variáveis do timer*****************************/
 void setup() {
-pinMode(13, OUTPUT);
-Serial.begin(115200);
-PonteInit();
-MPUInit();
-delay(100);
+  delay(1000);
+  pinMode(CLKR, INPUT);
+  pinMode(DTR, INPUT);
+  pinMode(DWR, INPUT);
+  pinMode(CLKL, INPUT);
+  pinMode(DTL, INPUT);
+  pinMode(DWL, INPUT);
 
- // mpu.getIntStatus();
+  digitalWrite(CLKR, HIGH);
+  digitalWrite(DTR, HIGH);
+  digitalWrite(DWR, HIGH);
+  digitalWrite(CLKL, HIGH);
+  digitalWrite(DTL, HIGH);
+  digitalWrite(DWL, HIGH);
+  
+  Serial.begin(115200);
+  PonteInit();
+  MPUInit();
+  Timer1.initialize(10000);
+  lastStateRight = digitalRead(CLKR);
+  lastStateLeft = digitalRead(CLKL);
+  Timer1.attachInterrupt(UpdateTick);
+  //delay(100);
+  
+  
 }
+double LT = 0;
+void dmpDataReady() {
+  mpuInterrupt = true;
+};
 
 void loop() {
   if(!mpuInterrupt)
     return;
     
   MPURequestData();
-  double t = micros() / 1000000.00 - dTime;
-  posAngleY += micros()*gyYangle/1000000.00;
-  double vel = (KD * (gyYangle) +  KP * posAngleY)/t;
-  Serial.print("dTime: "); Serial.print(t, 10);Serial.print("    Gy: ");Serial.print(gyYangle); Serial.print("  posAngleY: "); Serial.print(posAngleY); 
-  Serial.print("  Vel: "); Serial.print(vel);Serial.print("  KP: "); Serial.print(KP);Serial.print("  KD: "); Serial.println(KD);
-  MotorCommand(vel);
-  dTime = micros() / 1000000.00;
+  double t = micros() / 1000000.00 - lastTime;
+  posAngleY += t*gyYangle;
+  int difTick = tickR - tickL;
+  double SetPWMR = (KD * (gyYangle) +  KP * posAngleY - KR * difTick);
+  double SetPWML = (KD * (gyYangle) +  KP * posAngleY + KL * difTick);
+  MotorCommand(SetPWMR, SetPWML);
+  Serial.print("t: "); Serial.print(t, 10);Serial.print("    Gy: ");Serial.print(gyYangle); Serial.print("  posAngleY: "); Serial.print(posAngleY); 
+  Serial.print("  SetPWML: "); Serial.print(SetPWML);Serial.print("  SetPWMR: "); Serial.print(SetPWMR);Serial.print("  KP: "); Serial.print(KP);Serial.print("  KD: "); Serial.print(KD); 
+  Serial.print("  Delta Tick: "); Serial.println(difTick);
+  
+  lastTime = micros() / 1000000.00;
+  
 
+  
 }
