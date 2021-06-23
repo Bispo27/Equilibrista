@@ -51,16 +51,15 @@ void MPUInitQuaternions();
 
 
 void PonteInit();
-void MotorCommand(double cmdR, double cmdL);
+void MotorCommand(double cmdL, double cmdR);
 
 /**fim funções e variáveis PONTE-H***/
 
 /**funções e variáveis PD***/
 double KD = 2.500; //10
 double KP = 7500.0; //10000
-
-double KR = 0.50;
-double KL = 0.00;
+double KDposTick = 0.00;
+double KpTick = 0.00;//0.5;
 
 double setPoint = 0.00;
 
@@ -108,9 +107,7 @@ void setup() {
   Timer1.initialize(10000);
   lastStateRight = digitalRead(CLKR);
   lastStateLeft = digitalRead(CLKL);
-  Timer1.attachInterrupt(UpdateTick);
-  //delay(100);
-  
+  Timer1.attachInterrupt(UpdateTick);  
   
 }
 double LT = 0;
@@ -126,13 +123,16 @@ void loop() {
   double t = micros() / 1000000.00 - lastTime;
   posAngleY += t*gyYangle;
   int difTick = tickR - tickL;
-  double SetPWMR = (KD * (gyYangle) +  KP * posAngleY - KR * difTick);
-  double SetPWML = (KD * (gyYangle) +  KP * posAngleY + KL * difTick);
+  double posTick = (tickR + tickL) / 2;
+  
+  double SetPWMR = (KD * (gyYangle) +  KP * posAngleY + KDposTick*posTick - KpTick * difTick); // 
+  double SetPWML = (KD * (gyYangle) +  KP * posAngleY + KDposTick*posTick + KpTick * difTick);
   MotorCommand(SetPWMR, SetPWML);
   Serial.print("t: "); Serial.print(t, 10);Serial.print("    Gy: ");Serial.print(gyYangle); Serial.print("  posAngleY: "); Serial.print(posAngleY); 
-  Serial.print("  SetPWML: "); Serial.print(SetPWML);Serial.print("  SetPWMR: "); Serial.print(SetPWMR);Serial.print("  KP: "); Serial.print(KP);Serial.print("  KD: "); Serial.print(KD); 
-  Serial.print("  Delta Tick: "); Serial.println(difTick);
-  
+  Serial.print("  SetPWML: "); Serial.print(SetPWML);Serial.print("  SetPWMR: "); Serial.print(SetPWMR);
+  Serial.print("  KP: "); Serial.print(KP);Serial.print("  KD: "); Serial.print(KD); 
+  Serial.print("  posTick: "); Serial.print(posTick);Serial.print("  Delta Tick: "); Serial.println(difTick);
+
   lastTime = micros() / 1000000.00;
   
 
